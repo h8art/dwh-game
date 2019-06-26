@@ -149,7 +149,7 @@ export default {
               angle: v[3]
             };
 
-            console.log(`player: ${v[0]} ${JSON.stringify(player)}`)
+            // console.log(`player: ${v[0]} ${JSON.stringify(player)}`)
 
             this.players.push(player);
           }
@@ -244,18 +244,26 @@ export default {
                 window.session.request(`DELETE FROM ENEMIES WHERE id = ${v.id}`)
                 this.money += 10
                 window.session.request(`UPDATE users SET cash = ${this.money} WHERE id = ${this.playerId}`)
-                this.level = this.level>5?5:this.level + 1
-                for(let l=0; l<this.level; l++){
-                  let id = randomInteger(500, 2000000)
-                  let x = Math.floor(randomInteger(50, window.innerWidth - 50))
-                  let y = Math.floor(randomInteger(50, window.innerHeight - 50))
-                  window.session.request(`INSERT INTO enemies VALUES(${id}, 100, ${x}, ${y})`)
-                  this.enemies.push({
-                    left: x,
-                    top: y,
-                    hp: 100,
-                    id
-                  })
+
+                if (this.money >= this.level * 100 + 1000) {
+                  this.level = this.level>5?5:this.level + 1
+                  console.log("LEVEL INCREASED TO " + this.level)
+                }
+                
+                // Don't always generate enemies
+                if (randomInteger(0, 10) % (this.level + 1) == 0) {
+                  for(let l=0; l<this.level; l++){
+                    let id = randomInteger(500, 2000000)
+                    let x = Math.floor(randomInteger(50, window.innerWidth - 50))
+                    let y = Math.floor(randomInteger(50, window.innerHeight - 50))
+                    window.session.request(`INSERT INTO enemies VALUES(${id}, 100, ${x}, ${y})`)
+                    this.enemies.push({
+                      left: x,
+                      top: y,
+                      hp: 100,
+                      id
+                    })
+                  }
                 }
               }else {
                 v.hp -= 10
