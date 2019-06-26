@@ -4,7 +4,7 @@
     .treasure-btn(@click='lootModal = true')
     .treasure-modal(v-if='lootModal')
       .title LOOTBOX
-      img.loot(src='/loot.png')
+      img.loot(src='../../public/loot.png')
       .btns
         .exit(@click='lootModal = false') Cancel
         .open(@click='openLootbox') OPEN
@@ -33,15 +33,15 @@
           .exit(@click='marketModal = false') Cancel
   .quick
     .quick-item
-      img(v-if='items.length>0' :src='"/weapeon_"+items[0][1]+".png"')
+      img(v-if='items.length>0' :src='"../../public/weapeon_"+items[0][1]+".png"')
     .quick-item
-      img(v-if='items&&items[1]' :src='"/weapeon_"+items[1][1]+".png"')
+      img(v-if='items&&items[1]' :src='"../../public/weapeon_"+items[1][1]+".png"')
     .quick-item
-      img(v-if='items&&items[2]' :src='"/weapeon_"+items[2][1]+".png"')
+      img(v-if='items&&items[2]' :src='"../../public/weapeon_"+items[2][1]+".png"')
     .quick-item
-      img(v-if='items&&items[3]' :src='"/weapeon_"+items[3][1]+".png"')
+      img(v-if='items&&items[3]' :src='"../../public/weapeon_"+items[3][1]+".png"')
     .quick-item
-      img(v-if='items&&items[4]' :src='"/weapeon_"+items[4][1]+".png"')
+      img(v-if='items&&items[4]' :src='"../../public/weapeon_"+items[4][1]+".png"')
   .money Cash {{money}}$
   .game(@click='shoot')
     .playerFriend(v-for='p in players' :style='{ "left": p.left + "px", "top": p.top + "px", "transform": "rotate("+p.rotate+"deg)" }')
@@ -96,7 +96,7 @@ export default {
           let id = randomInteger(500, 2000000)
           let x = Math.floor(randomInteger(50, window.innerWidth - 50))
           let y = Math.floor(randomInteger(50, window.innerHeight - 50))
-          window.session.request(`INSERT INTO enemies VALUES(${id}, 100, ${x}, ${y})`).result().then((r) => {
+          window.session.request(`INSERT INTO enemies VALUES(${id}, 100, ${x}, ${y})`).then((r) => {
             this.enemies.push({
               left: x,
               top: y,
@@ -214,19 +214,19 @@ export default {
           this.enemies.forEach((v, j)=> {
             if(Math.abs(v.left - e.left) < 30 && Math.abs(v.top - e.top) < 30){ 
               this.bullets.splice(i, 1)
-              if(v.hp - 10 < 0){
+              if(v.hp - 10 <= 0){
                 this.enemies.splice(j, 1)
-                window.session.request(`DELETE FROM ENEMIES WHERE id = ${v.id}`).result().then(r=>{
-                  console.log('killed')
-                })
+                console.log('killed')
+                window.session.request(`DELETE FROM ENEMIES WHERE id = ${v.id}`)
                 this.money += 10
+                console.log("SETTING CASH TO " + this.money + " GAME IS " + window.localStorage.getItem("game"))
                 window.session.request(`UPDATE users SET cash = ${this.money} WHERE id = ${window.localStorage.getItem("game")}`)
                 this.level = this.level>5?5:this.level + 1
                 for(let l=0; l<this.level; l++){
                   let id = randomInteger(500, 2000000)
                   let x = Math.floor(randomInteger(50, window.innerWidth - 50))
                   let y = Math.floor(randomInteger(50, window.innerHeight - 50))
-                  window.session.request(`INSERT INTO enemies VALUES(${id}, 100, ${x}, ${y})`).result().then((r) => {
+                  window.session.request(`INSERT INTO enemies VALUES(${id}, 100, ${x}, ${y})`).then((r) => {
                     this.enemies.push({
                       left: x,
                       top: y,
@@ -237,9 +237,9 @@ export default {
                 }
               }else {
                 v.hp -= 10
-                window.session.request(`UPDATE enemies SET hp = ${v.hp - 10} WHERE id = ${v.id}`).result().then((r) => {
-                  console.log('dmg')
-                })
+                console.log("CASH IS " + this.money + " GAME IS " + window.localStorage.getItem("game"))
+                window.session.request(`UPDATE enemies SET hp = ${v.hp - 10} WHERE id = ${v.id}`)
+                console.log('dmg')
               }
             }
           })
@@ -261,7 +261,6 @@ export default {
         console.log("Session created");
         window.session = s;
         this.getItems()
-        window.session.request(`SELECT * FROM users`).result().then((r) => {console.log(r.asString())})
     });
     setTimeout(()=>{
      var arrow = document.getElementById("player");
@@ -422,7 +421,7 @@ export default {
       width: 90px
       height: 90px
       background-repeat: no-repeat
-      background: center center rgba(233,30,99, .4) url(/treasure.png) no-repeat
+      background: center center rgba(233,30,99, .4) url('../../public/treasure.png') no-repeat
       border-top-left-radius: 25px
       border-bottom-left-radius: 25px
       border-left: 5px solid rgb(233,30,99)
@@ -536,7 +535,7 @@ export default {
       width: 90px
       height: 90px
       background-repeat: no-repeat
-      background: center center rgba(233,30,99, .4) url(/auction.png) no-repeat
+      background: center center rgba(233,30,99, .4) url('../../public/auction.png') no-repeat
       border-top-left-radius: 25px
       border-bottom-left-radius: 25px
       border-left: 5px solid rgb(233,30,99)
@@ -554,7 +553,7 @@ export default {
       width: 90px
       height: 90px
       background-repeat: no-repeat
-      background: center center rgba(233,30,99, .4) url(/rucksack.png) no-repeat
+      background: center center rgba(233,30,99, .4) url('../../public/rucksack.png') no-repeat
       border-top-left-radius: 25px
       border-bottom-left-radius: 25px
       border-left: 5px solid rgb(233,30,99)
@@ -571,16 +570,16 @@ export default {
     right: 15px
     top: 15px
   .game
-    background: url('/stone2_b.jpg')
+    background: url('../../public/stone2_b.jpg')
     background-size: 42px 32px
     width: 100vw
     height: 100vh
-    cursor: url('/crosshair.png'), auto;
+    cursor: url('../../public/crosshair.png'), auto;
     .enemy
       width: 40px
       height: 40px
       position: absolute
-      background-image: url(/enemy.png)
+      background-image: url('../../public/enemy.png')
       background-size: 100% 100%
       .hp
         background: red
@@ -593,14 +592,14 @@ export default {
       width: 40px
       height: 40px
       position: absolute
-      background-image: url(/player.png)
+      background-image: url('../../public/player.png')
       background-size: 100% 100%
       transition: top .3s, left .3s
     .player
       width: 40px
       height: 40px
       position: absolute
-      background-image: url(/player.png)
+      background-image: url('../../public/player.png')
       background-size: 100% 100%
       transition: top .3s, left .3s
     .bullet
