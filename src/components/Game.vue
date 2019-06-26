@@ -54,13 +54,13 @@
 <script>
 import * as fluence from "fluence";
 function randomInteger(min, max) {
-  var rand = min - 0.5 + Math.random() * (max - min + 1);
+  var rand = min - 0.5 + Math.random() * (max - min + 1)
   rand = Math.round(rand);
   return rand;
 }
 export default {
-  data() {
-    return {
+  data(){
+    return{
       left: 0,
       top: 0,
       money: 1000,
@@ -76,349 +76,247 @@ export default {
       items: [],
       orders: [],
       players: []
-    };
+    }
   },
-  //   >>>CREATE TABLE weapeons(id int, type int, level int, userId int)
-  // table created
+//   >>>CREATE TABLE weapeons(id int, type int, level int, userId int)
+// table created
 
-  // >>>CREATE TABLE orders(id int, price int, type int, userId int)
-  // table created
+// >>>CREATE TABLE orders(id int, price int, type int, userId int)
+// table created
 
-  //CREATE TABLE enemies(id int, hp int, posX int, posY int)
+//CREATE TABLE enemies(id int, hp int, posX int, posY int)
   methods: {
     getEnemies: function() {
-      window.session
-        .request(`SELECT * FROM enemies`)
-        .result()
-        .then(r => {
-          var val = r
-            .asString()
-            .split("\n")
-            .map(i => i.split(", "));
-          val.splice(0, 1);
-          console.log(r);
-          this.enemies = [];
-          if (val.length <= 1) {
-            let id = randomInteger(500, 2000000);
-            let x = Math.floor(randomInteger(50, window.innerWidth - 50));
-            let y = Math.floor(randomInteger(50, window.innerHeight - 50));
-            window.session
-              .request(`INSERT INTO enemies VALUES(${id}, 100, ${x}, ${y})`)
-              .then(r => {
-                this.enemies.push({
-                  left: x,
-                  top: y,
-                  hp: 100,
-                  id
-                });
-              });
-          } else {
-            val.forEach(v => {
-              if (v) {
-                this.enemies.push({
-                  left: v[2],
-                  top: v[3],
-                  hp: v[1],
-                  id: v[0]
-                });
-              }
-            });
-          }
-          setTimeout(() => this.getEnemies(), 1000);
-        });
+      window.session.request(`SELECT * FROM enemies`).result().then((r)=>{
+        var val = r.asString().split("\n").map(i => i.split(", "))
+        val.splice(0, 1)
+        console.log(r)
+        this.enemies = []
+        if(val.length <= 1){
+          let id = randomInteger(500, 2000000)
+          let x = Math.floor(randomInteger(50, window.innerWidth - 50))
+          let y = Math.floor(randomInteger(50, window.innerHeight - 50))
+          window.session.request(`INSERT INTO enemies VALUES(${id}, 100, ${x}, ${y})`).then((r) => {
+            this.enemies.push({
+              left: x,
+              top: y,
+              hp: 100,
+              id
+            })
+          })
+        }else{
+          val.forEach(v=>{
+            if(v){
+              this.enemies.push({
+                left: v[2],
+                top: v[3],
+                hp: v[1],
+                id: v[0]
+              })
+            }
+          })
+        }
+        setTimeout(()=>this.getEnemies(), 1000)
+      })
+      
     },
     getPlayers: function() {
-      window.session
-        .request(`SELECT * FROM players`)
-        .result()
-        .then(r => {
-          console.log(r.asString());
-          var val = r
-            .asString()
-            .split("\n")
-            .map(i => i.split(", "));
-          val.splice(0, 1);
-          this.players = [];
-          console.log(val);
-          val.forEach(v => {
-            console.log(v);
-            if (v && v[0] !== window.localStorage.getItem("game")) {
-              this.players.push({
-                left: v[1],
-                top: v[2],
-                angle: v[3]
-              });
-            }
-          });
-          setTimeout(() => this.getPlayers(), 500);
-        });
+      window.session.request(`SELECT * FROM players`).result().then((r)=>{
+        console.log(r.asString())
+        var val = r.asString().split("\n").map(i => i.split(", "))
+        val.splice(0, 1)
+        this.players = []
+        console.log(val)
+        val.forEach(v=>{
+          console.log(v)
+          if(v&&v[0]!==window.localStorage.getItem("game")){
+            this.players.push({
+              left: v[1],
+              top: v[2],
+              angle: v[3]
+            })
+          }
+        })
+        setTimeout(()=>this.getPlayers(), 500)
+      })
     },
     openMarket: function() {
-      this.marketModal = true;
-      window.session
-        .request(`SELECT * FROM orders`)
-        .result()
-        .then(r => {
-          var val = r
-            .asString()
-            .split("\n")
-            .map(i => i.split(", "));
-          val.splice(0, 1);
-          this.orders = val;
-        });
+      this.marketModal = true
+      window.session.request(`SELECT * FROM orders`).result().then((r) => {
+        var val = r.asString().split("\n").map(i => i.split(", "))
+        val.splice(0, 1)
+        this.orders = val
+      })
     },
-    buyItem: function(o) {
-      window.session.request(
-        `INSERT INTO weapeons VALUES(${randomInteger(500, 2000000)}, ${
-          o[2]
-        }, 0, ${window.localStorage.getItem("game")})`
-      );
-
-      window.session
-        .request(`SELECT * FROM users`)
-        .result()
-        .then(r => {
-          var val = r
-            .asString()
-            .split("\n")
-            .map(i => i.split(", "));
-          val.splice(0, 1);
-          window.session.request(
-            `UPDATE users SET cash = ${parseInt(
-              val.filter(i => parseInt(i[0]) == o[3])[0][2]
-            ) + parseInt(o[1])} WHERE id = ${o[3]}`
-          );
-          window.session.request(
-            `UPDATE users SET cash = ${val.filter(
-              i => parseInt(i[0]) == window.localStorage.getItem("game")
-            )[0][2] - o[1]} WHERE id = ${window.localStorage.getItem("game")}`
-          );
-        });
-      console.log(o[0]);
-      window.session.request(`DELETE FROM orders WHERE id = ${o[0]}`);
-      this.money -= o[1];
+    buyItem: function(o){
+      window.session.request(`INSERT INTO weapeons VALUES(${randomInteger(500, 2000000)}, ${o[2]}, 0, ${window.localStorage.getItem("game")})`)
+      
+      window.session.request(`SELECT * FROM users`).result().then((r) => {
+        var val = r.asString().split("\n").map(i => i.split(", "))
+        val.splice(0, 1)
+        window.session.request(`UPDATE users SET cash = ${parseInt(val.filter(i=>parseInt(i[0])==o[3])[0][2]) + parseInt(o[1])} WHERE id = ${o[3]}`)
+        window.session.request(`UPDATE users SET cash = ${val.filter(i=>parseInt(i[0])==window.localStorage.getItem("game"))[0][2] - o[1]} WHERE id = ${window.localStorage.getItem("game")}`)
+      })
+      console.log(o[0])
+      window.session.request(`DELETE FROM orders WHERE id = ${o[0]}`)
+      this.money -= o[1]
     },
     getItems: function() {
-      window.session
-        .request(
-          `SELECT cash FROM users WHERE id = ${window.localStorage.getItem(
-            "game"
-          )}`
-        )
-        .result()
-        .then(r => {
-          this.money = parseInt(r.asString().split("\n")[1]);
-        });
-      window.session
-        .request(
-          `SELECT * FROM weapeons WHERE userId = ${window.localStorage.getItem(
-            "game"
-          )}`
-        )
-        .result()
-        .then(r => {
-          if (r.asString().split("\n")[1]) {
-            var val = r
-              .asString()
-              .split("\n")
-              .map(i => i.split(", "));
-            val.splice(0, 1);
-            val.unshift([0, 0, 0, 0]);
-            this.items = val;
-          }
-        });
+      window.session.request(`SELECT cash FROM users WHERE id = ${window.localStorage.getItem("game")}`).result().then((r) => {
+        this.money = parseInt(r.asString().split("\n")[1] )
+      })
+      window.session.request(`SELECT * FROM weapeons WHERE userId = ${window.localStorage.getItem("game")}`).result().then((r) => {
+        if(r.asString().split("\n")[1]){
+          var val = r.asString().split("\n").map(i => i.split(", "))
+          val.splice(0, 1)
+          val.unshift([0,0,0,0])
+          this.items = val
+        }
+      })
     },
     sellItem: function() {
-      let iInd = this.marketSellSelected;
-      window.session.request(
-        `INSERT INTO orders VALUES(${randomInteger(500, 2000000)}, ${
-          this.marketSellPrice
-        }, ${this.items[iInd][1]}, ${window.localStorage.getItem("game")})`
-      );
-      window.session.request(
-        `DELETE FROM weapeons WHERE id = ${this.items[iInd][0]}`
-      );
-      this.marketSellPrice = null;
-      this.marketSellSelected = null;
-      this.items.splice(iInd, 1);
+      let iInd = this.marketSellSelected
+      window.session.request(`INSERT INTO orders VALUES(${randomInteger(500, 2000000)}, ${this.marketSellPrice}, ${this.items[iInd][1]}, ${window.localStorage.getItem("game")})`)
+      window.session.request(`DELETE FROM weapeons WHERE id = ${this.items[iInd][0]}`)
+      this.marketSellPrice = null
+      this.marketSellSelected = null
+      this.items.splice(iInd, 1)
     },
-    openLootbox: function() {
-      if (this.money > 20) {
-        this.money -= 20;
-        let num = randomInteger(1, 4);
-        this.show_weapeon = num;
-        setTimeout(() => (this.show_weapeon = null), 3000);
-        window.session.request(
-          `INSERT INTO weapeons VALUES(${randomInteger(
-            500,
-            2000000
-          )}, ${num}, 0, ${window.localStorage.getItem("game")})`
-        );
-        this.items.push(num);
-      } else {
-        alert("Not enough cash. Need 20$");
+    openLootbox: function(){
+      if(this.money > 20){
+        this.money -= 20
+        let num = randomInteger(1,4)
+        this.show_weapeon = num
+        setTimeout(()=>this.show_weapeon = null, 3000)
+        window.session.request(`INSERT INTO weapeons VALUES(${randomInteger(500, 2000000)}, ${num}, 0, ${window.localStorage.getItem("game")})`)
+        this.items.push(num)
+      }else {
+        alert("Not enough cash. Need 20$")
       }
     },
-    shoot: function(e) {
+    shoot: function(e){
       this.bullets.push({
         endY: e.y,
         endX: e.x,
         left: this.left,
         top: this.top
-      });
+      })
     },
-    regenerate: function() {
-      if (this.bullets) {
-        this.bullets.forEach((e, i) => {
+    regenerate: function () {
+      if(this.bullets){
+        this.bullets.forEach((e, i )=> {
           let dx = e.endX - e.left;
           let dy = e.endY - e.top;
-          let angle = Math.atan2(dy, dx);
-          let velocity = 5;
-          e.left += velocity * Math.cos(angle);
-          e.top += velocity * Math.sin(angle);
-          this.enemies.forEach((v, j) => {
-            if (
-              Math.abs(v.left - e.left) < 30 &&
-              Math.abs(v.top - e.top) < 30
-            ) {
-              this.bullets.splice(i, 1);
-              if (v.hp - 10 <= 0) {
-                this.enemies.splice(j, 1);
-                console.log("killed");
-                window.session.request(
-                  `DELETE FROM ENEMIES WHERE id = ${v.id}`
-                );
-                this.money += 10;
-                console.log(
-                  "SETTING CASH TO " +
-                    this.money +
-                    " GAME IS " +
-                    window.localStorage.getItem("game")
-                );
-                window.session.request(
-                  `UPDATE users SET cash = ${
-                    this.money
-                  } WHERE id = ${window.localStorage.getItem("game")}`
-                );
-                this.level = this.level > 5 ? 5 : this.level + 1;
-                for (let l = 0; l < this.level; l++) {
-                  let id = randomInteger(500, 2000000);
-                  let x = Math.floor(randomInteger(50, window.innerWidth - 50));
-                  let y = Math.floor(
-                    randomInteger(50, window.innerHeight - 50)
-                  );
-                  window.session
-                    .request(
-                      `INSERT INTO enemies VALUES(${id}, 100, ${x}, ${y})`
-                    )
-                    .then(r => {
-                      this.enemies.push({
-                        left: x,
-                        top: y,
-                        hp: 100,
-                        id
-                      });
-                    });
+          let angle = Math.atan2(dy, dx)
+          let velocity = 5
+          e.left += velocity * Math.cos(angle)
+          e.top += velocity * Math.sin(angle)
+          this.enemies.forEach((v, j)=> {
+            if(Math.abs(v.left - e.left) < 30 && Math.abs(v.top - e.top) < 30){ 
+              this.bullets.splice(i, 1)
+              if(v.hp - 10 <= 0){
+                this.enemies.splice(j, 1)
+                console.log('killed')
+                window.session.request(`DELETE FROM ENEMIES WHERE id = ${v.id}`)
+                this.money += 10
+                console.log("SETTING CASH TO " + this.money + " GAME IS " + window.localStorage.getItem("game"))
+                window.session.request(`UPDATE users SET cash = ${this.money} WHERE id = ${window.localStorage.getItem("game")}`)
+                this.level = this.level>5?5:this.level + 1
+                for(let l=0; l<this.level; l++){
+                  let id = randomInteger(500, 2000000)
+                  let x = Math.floor(randomInteger(50, window.innerWidth - 50))
+                  let y = Math.floor(randomInteger(50, window.innerHeight - 50))
+                  window.session.request(`INSERT INTO enemies VALUES(${id}, 100, ${x}, ${y})`).then((r) => {
+                    this.enemies.push({
+                      left: x,
+                      top: y,
+                      hp: 100,
+                      id
+                    })
+                  })
                 }
-              } else {
-                v.hp -= 10;
-                console.log(
-                  "CASH IS " +
-                    this.money +
-                    " GAME IS " +
-                    window.localStorage.getItem("game")
-                );
-                window.session.request(
-                  `UPDATE enemies SET hp = ${v.hp - 10} WHERE id = ${v.id}`
-                );
-                console.log("dmg");
+              }else {
+                v.hp -= 10
+                console.log("CASH IS " + this.money + " GAME IS " + window.localStorage.getItem("game"))
+                window.session.request(`UPDATE enemies SET hp = ${v.hp - 10} WHERE id = ${v.id}`)
+                console.log('dmg')
               }
             }
-          });
-          if (Math.abs(dx) < 10 && Math.abs(dy) < 10) {
-            this.bullets.splice(i, 1);
+          })
+          if(Math.abs(dx) < 10 && Math.abs(dy) < 10){ 
+            this.bullets.splice(i, 1)
           }
         });
       }
+      
     }
   },
-  mounted() {
-    let privateKey =
-      "569ae4fed4b0485848d3cf9bbe3723f5783aadd0d5f6fd83e18b45ac22496859"; // Authorization private key
-    let contract = "0xeFF91455de6D4CF57C141bD8bF819E5f873c1A01"; // Fluence contract address
-    let appId = 267; // Deployed database id
-    let ethereumUrl = "http://geth.fluence.one:8545"; // Ethereum light node URL
+  mounted(){
+    let privateKey = "569ae4fed4b0485848d3cf9bbe3723f5783aadd0d5f6fd83e18b45ac22496859"; // Authorization private key
+    let contract = "0xeFF91455de6D4CF57C141bD8bF819E5f873c1A01";                         // Fluence contract address
+    let appId = 267;                                                                      // Deployed database id
+    let ethereumUrl = "http://geth.fluence.one:8545";                                    // Ethereum light node URL
 
-    fluence.connect(contract, appId, ethereumUrl, privateKey).then(s => {
-      console.log("Session created");
-      window.session = s;
-      this.getItems();
+    fluence.connect(contract, appId, ethereumUrl, privateKey).then((s) => {
+        console.log("Session created");
+        window.session = s;
+        this.getItems()
     });
-    setTimeout(() => {
-      var arrow = document.getElementById("player");
-      var arrowRects = arrow.getBoundingClientRect();
-      var arrowX = arrowRects.left + arrowRects.width / 2;
-      var arrowY = arrowRects.top + arrowRects.height / 2;
-      this.rotate =
-        "rotate(" + Math.abs(Math.atan2(0 - arrowY, 0 - arrowX)) + "rad)";
-      addEventListener("mousemove", e => {
-        let eyes = document.getElementById("player");
-        let mouseX = eyes.getBoundingClientRect().left;
-        let mouseY = eyes.getBoundingClientRect().top;
-        let radianDegrees = Math.atan2(e.pageX - mouseX, e.pageY - mouseY);
-        let rotationDegrees = radianDegrees * (180 / Math.PI) * -1 + 180;
-        eyes.style.transform = `rotate(${rotationDegrees}deg)`;
-      });
-      addEventListener("keydown", e => {
-        let pRad = Math.atan2(event.clientY - arrowY, event.clientX - arrowX);
-        arrow.style.transform = "rotate(" + pRad + "rad)";
-        if (e.keyCode == "87") {
-          // up arrow
-          if (this.top - 50 >= 0) {
-            this.top -= 50;
-          }
-        } else if (e.keyCode == "83") {
-          // down arrow
-          if (this.top + 50 < window.innerHeight) {
-            this.top += 50;
-          }
-        } else if (e.keyCode == "65") {
-          // left arrow
-          if (this.left - 50 >= 0) {
-            this.left -= 50;
-          }
-        } else if (e.keyCode == "68") {
-          // right arrow
-          if (this.left + 50 < window.innerWidth) {
-            this.left += 50;
-          }
+    setTimeout(()=>{
+     var arrow = document.getElementById("player");
+    var arrowRects = arrow.getBoundingClientRect();
+    var arrowX = arrowRects.left + arrowRects.width / 2;
+    var arrowY = arrowRects.top + arrowRects.height / 2;
+    this.rotate = "rotate(" + Math.abs(Math.atan2(0 - arrowY, 0 - arrowX)) + "rad)";
+    addEventListener("mousemove", (e) => {
+      let eyes = document.getElementById("player");
+      let mouseX = (eyes.getBoundingClientRect().left); 
+      let mouseY = (eyes.getBoundingClientRect().top);
+      let radianDegrees = Math.atan2(e.pageX - mouseX, e.pageY - mouseY);
+      let rotationDegrees = (radianDegrees * (180/ Math.PI) * -1) + 180;
+      eyes.style.transform = `rotate(${rotationDegrees}deg)`
+    });
+    addEventListener("keydown", (e) => {
+      let pRad = Math.atan2(event.clientY - arrowY, event.clientX - arrowX)
+      arrow.style.transform = "rotate(" + pRad + "rad)";
+      if (e.keyCode == '87') {
+        // up arrow
+        if(this.top - 50 >= 0) {
+          this.top -= 50
         }
-        //CREATE TABLE players(id int, posX int, posY int, angle int)
-        window.session.request(
-          `UPDATE players SET angle = ${pRad} WHERE id = ${window.localStorage.getItem(
-            "game"
-          )}`
-        );
-        window.session.request(
-          `UPDATE players SET posX = ${
-            this.left
-          } WHERE id = ${window.localStorage.getItem("game")}`
-        );
-        window.session.request(
-          `UPDATE players SET posY = ${
-            this.top
-          } WHERE id = ${window.localStorage.getItem("game")}`
-        );
-      });
-      this.getEnemies();
-      this.getPlayers();
-      var self = this;
-      setInterval(function() {
-        self.regenerate();
-      }, 10);
-    }, 1000);
+      }
+      else if (e.keyCode == '83') {
+        // down arrow
+        if(this.top + 50 < window.innerHeight) {
+          this.top += 50
+        }
+      }
+      else if (e.keyCode == '65') {
+        // left arrow
+        if(this.left - 50 >= 0) {
+          this.left -= 50
+        }
+      }
+      else if (e.keyCode == '68') {
+        // right arrow
+        if(this.left + 50 < window.innerWidth) {
+          this.left += 50
+        }
+      }
+      //CREATE TABLE players(id int, posX int, posY int, angle int)
+      window.session.request(`UPDATE players SET angle = ${pRad} WHERE id = ${window.localStorage.getItem("game")}`)
+      window.session.request(`UPDATE players SET posX = ${this.left} WHERE id = ${window.localStorage.getItem("game")}`)
+      window.session.request(`UPDATE players SET posY = ${this.top} WHERE id = ${window.localStorage.getItem("game")}`)
+    })
+    this.getEnemies()
+    this.getPlayers()
+    var self = this;
+		setInterval(function(){
+      self.regenerate();
+    }, 10);
+    }, 1000)
   }
-};
+}
 </script>
 
 <style lang="sass" scoped>
