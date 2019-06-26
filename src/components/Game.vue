@@ -247,11 +247,12 @@ export default {
 
                 if (this.money >= this.level * 100 + 1000) {
                   this.level = this.level>5?5:this.level + 1
-                  console.log("LEVEL INCREASED TO " + this.level)
+                  console.log("Level INCREASED => " + this.level)
                 }
                 
                 // Don't always generate enemies
                 if (randomInteger(0, 10) % (this.level + 1) == 0) {
+                  console.log(`generating ${this.level} enemies`)
                   for(let l=0; l<this.level; l++){
                     let id = randomInteger(500, 2000000)
                     let x = Math.floor(randomInteger(50, window.innerWidth - 50))
