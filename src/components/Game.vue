@@ -53,10 +53,22 @@
 </template>
 <script>
 import * as fluence from "fluence";
+import { isNullOrUndefined } from 'util';
 function randomInteger(min, max) {
   var rand = min - 0.5 + Math.random() * (max - min + 1)
   rand = Math.round(rand);
   return rand;
+}
+function getRandomInt(min, max) {
+  return Math.floor(Math.random() * (max - min)) + min;
+}
+function getPlayerId() {
+  var playerId = parseInt(window.localStorage.getItem("game"));
+  if (isNullOrUndefined(playerId) || isNaN(playerId)) {
+    playerId = getRandomInt(0, 9999999);
+    window.localStorage.setItem("game", playerId);
+  }
+  return playerId;
 }
 export default {
   data(){
@@ -64,6 +76,7 @@ export default {
       left: 0,
       top: 0,
       money: 1000,
+      playerId: getPlayerId(),
       enemies: [],
       lootModal: false,
       marketModal: false,
@@ -129,7 +142,7 @@ export default {
         console.log(val)
         val.forEach(v=>{
           console.log(v)
-          if(v&&v[0]!==window.localStorage.getItem("game")){
+          if(v&&v[0]!==this.playerId){
             this.players.push({
               left: v[1],
               top: v[2],
@@ -149,23 +162,27 @@ export default {
       })
     },
     buyItem: function(o){
-      window.session.request(`INSERT INTO weapeons VALUES(${randomInteger(500, 2000000)}, ${o[2]}, 0, ${window.localStorage.getItem("game")})`)
+      window.session.request(`INSERT INTO weapeons VALUES(${randomInteger(500, 2000000)}, ${o[2]}, 0, ${this.playerId})`)
       
       window.session.request(`SELECT * FROM users`).result().then((r) => {
         var val = r.asString().split("\n").map(i => i.split(", "))
         val.splice(0, 1)
         window.session.request(`UPDATE users SET cash = ${parseInt(val.filter(i=>parseInt(i[0])==o[3])[0][2]) + parseInt(o[1])} WHERE id = ${o[3]}`)
-        window.session.request(`UPDATE users SET cash = ${val.filter(i=>parseInt(i[0])==window.localStorage.getItem("game"))[0][2] - o[1]} WHERE id = ${window.localStorage.getItem("game")}`)
+        window.session.request(`UPDATE users SET cash = ${val.filter(i=>parseInt(i[0])==this.playerId)[0][2] - o[1]} WHERE id = ${this.playerId}`)
       })
       console.log(o[0])
       window.session.request(`DELETE FROM orders WHERE id = ${o[0]}`)
       this.money -= o[1]
     },
     getItems: function() {
-      window.session.request(`SELECT cash FROM users WHERE id = ${window.localStorage.getItem("game")}`).result().then((r) => {
-        this.money = parseInt(r.asString().split("\n")[1] )
+      window.session.request(`SELECT cash FROM users WHERE id = ${this.playerId}`).result().then((r) => {
+        let money = parseInt(r.asString().split("\n")[1])
+        if (!isNaN(money) && !isNullOrUndefined(money)) {
+          this.money = money
+        }
+        console.log(`cash for ${this.playerId} is ${this.money}`)
       })
-      window.session.request(`SELECT * FROM weapeons WHERE userId = ${window.localStorage.getItem("game")}`).result().then((r) => {
+      window.session.request(`SELECT * FROM weapeons WHERE userId = ${this.playerId}`).result().then((r) => {
         if(r.asString().split("\n")[1]){
           var val = r.asString().split("\n").map(i => i.split(", "))
           val.splice(0, 1)
@@ -176,7 +193,7 @@ export default {
     },
     sellItem: function() {
       let iInd = this.marketSellSelected
-      window.session.request(`INSERT INTO orders VALUES(${randomInteger(500, 2000000)}, ${this.marketSellPrice}, ${this.items[iInd][1]}, ${window.localStorage.getItem("game")})`)
+      window.session.request(`INSERT INTO orders VALUES(${randomInteger(500, 2000000)}, ${this.marketSellPrice}, ${this.items[iInd][1]}, ${this.playerId})`)
       window.session.request(`DELETE FROM weapeons WHERE id = ${this.items[iInd][0]}`)
       this.marketSellPrice = null
       this.marketSellSelected = null
@@ -188,7 +205,7 @@ export default {
         let num = randomInteger(1,4)
         this.show_weapeon = num
         setTimeout(()=>this.show_weapeon = null, 3000)
-        window.session.request(`INSERT INTO weapeons VALUES(${randomInteger(500, 2000000)}, ${num}, 0, ${window.localStorage.getItem("game")})`)
+        window.session.request(`INSERT INTO weapeons VALUES(${randomInteger(500, 2000000)}, ${num}, 0, ${this.playerId})`)
         this.items.push(num)
       }else {
         alert("Not enough cash. Need 20$")
@@ -216,28 +233,27 @@ export default {
               this.bullets.splice(i, 1)
               if(v.hp - 10 <= 0){
                 this.enemies.splice(j, 1)
-                console.log('killed')
                 window.session.request(`DELETE FROM ENEMIES WHERE id = ${v.id}`)
+                console.log('killed')
                 this.money += 10
-                console.log("SETTING CASH TO " + this.money + " GAME IS " + window.localStorage.getItem("game"))
-                window.session.request(`UPDATE users SET cash = ${this.money} WHERE id = ${window.localStorage.getItem("game")}`)
+                console.log("SETTING CASH TO " + this.money + " GAME IS " + this.playerId)
+                window.session.request(`UPDATE users SET cash = ${this.money} WHERE id = ${this.playerId}`)
                 this.level = this.level>5?5:this.level + 1
                 for(let l=0; l<this.level; l++){
                   let id = randomInteger(500, 2000000)
                   let x = Math.floor(randomInteger(50, window.innerWidth - 50))
                   let y = Math.floor(randomInteger(50, window.innerHeight - 50))
-                  window.session.request(`INSERT INTO enemies VALUES(${id}, 100, ${x}, ${y})`).then((r) => {
-                    this.enemies.push({
-                      left: x,
-                      top: y,
-                      hp: 100,
-                      id
-                    })
+                  window.session.request(`INSERT INTO enemies VALUES(${id}, 100, ${x}, ${y})`)
+                  this.enemies.push({
+                    left: x,
+                    top: y,
+                    hp: 100,
+                    id
                   })
                 }
               }else {
                 v.hp -= 10
-                console.log("CASH IS " + this.money + " GAME IS " + window.localStorage.getItem("game"))
+                console.log("CASH IS " + this.money + " GAME IS " + this.playerId)
                 window.session.request(`UPDATE enemies SET hp = ${v.hp - 10} WHERE id = ${v.id}`)
                 console.log('dmg')
               }
@@ -304,9 +320,9 @@ export default {
         }
       }
       //CREATE TABLE players(id int, posX int, posY int, angle int)
-      window.session.request(`UPDATE players SET angle = ${pRad} WHERE id = ${window.localStorage.getItem("game")}`)
-      window.session.request(`UPDATE players SET posX = ${this.left} WHERE id = ${window.localStorage.getItem("game")}`)
-      window.session.request(`UPDATE players SET posY = ${this.top} WHERE id = ${window.localStorage.getItem("game")}`)
+      window.session.request(`UPDATE players SET angle = ${pRad} WHERE id = ${this.playerId}`)
+      window.session.request(`UPDATE players SET posX = ${this.left} WHERE id = ${this.playerId}`)
+      window.session.request(`UPDATE players SET posY = ${this.top} WHERE id = ${this.playerId}`)
     })
     this.getEnemies()
     this.getPlayers()
