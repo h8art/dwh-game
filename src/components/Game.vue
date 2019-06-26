@@ -10,7 +10,7 @@
         .open(@click='openLootbox') OPEN
     .treasure-weapeon(v-if='show_weapeon')
       .box
-        img.animated.tada.infinite(:src='"/weapeon_"+show_weapeon+".png"')
+        img.animated.tada.infinite(:src='"../../public/weapeon_"+show_weapeon+".png"')
   //- .items(@click='start')
   //-   .items-btn
   .market
@@ -19,14 +19,14 @@
       .bag
         .bag-list
           .bag-list-item(v-for='item, i in items', v-if='i>0&&items.length>0' @click='marketSellSelected = i' :class='{"selected" : marketSellSelected == i}')
-            img(:src='"weapeon_"+item[1]+".png"')
+            img(:src='"../../public/weapeon_"+item[1]+".png"')
         .sell
           input.price(v-model='marketSellPrice')
           .sell-btn(@click='sellItem') SELL
       .order
         .order-list
           .order-list-item(v-for='o in orders' v-if='orders')
-            img(:src='"weapeon_"+o[2]+".png"')
+            img(:src='"../../public/weapeon_"+o[2]+".png"')
             .price {{o[1]}}
             .buy(@click='buyItem(o)') BUY
         .btns
