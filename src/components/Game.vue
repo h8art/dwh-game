@@ -297,7 +297,7 @@ export default {
       eyes.style.transform = `rotate(${rotationDegrees}deg)`
     });
     addEventListener("keydown", (e) => {
-      let pRad = Math.atan2(event.clientY - arrowY, event.clientX - arrowX)
+      let pRad = 0//Math.atan2(event.clientY - arrowY, event.clientX - arrowX) //TODO: where to get event.clientY & event.clientX?
       arrow.style.transform = "rotate(" + pRad + "rad)";
       if (e.keyCode == '87') {
         // up arrow
@@ -324,9 +324,7 @@ export default {
         }
       }
       //CREATE TABLE players(id int, posX int, posY int, angle int)
-      window.session.request(`UPDATE players SET angle = ${pRad} WHERE id = ${this.playerId}`)
-      window.session.request(`UPDATE players SET posX = ${this.left} WHERE id = ${this.playerId}`)
-      window.session.request(`UPDATE players SET posY = ${this.top} WHERE id = ${this.playerId}`)
+      window.session.request(`UPDATE players SET posX = ${this.left}, posY = ${this.top}, angle = ${pRad} WHERE id = ${this.playerId}`)
     })
     this.getEnemies()
     this.getPlayers()
