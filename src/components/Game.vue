@@ -101,59 +101,65 @@ export default {
   methods: {
     getEnemies: function() {
       window.session.request(`SELECT * FROM enemies`).result().then((r)=>{
-        var val = r.asString().split("\n").map(i => i.split(", "))
-        val.splice(0, 1)
-        this.enemies = []
-        if(val.length <= 1){
-          let id = randomInteger(500, 2000000)
-          let x = Math.floor(randomInteger(50, window.innerWidth - 50))
-          let y = Math.floor(randomInteger(50, window.innerHeight - 50))
-          window.session.request(`INSERT INTO enemies VALUES(${id}, 100, ${x}, ${y})`).then((r) => {
-            this.enemies.push({
-              left: x,
-              top: y,
-              hp: 100,
-              id
-            })
-          })
-        }else{
-          val.forEach(v=>{
-            if(v){
+        // console.log("syncing enemies")
+        try {
+          var val = r.asString().split("\n").map(i => i.split(", "))
+          val.splice(0, 1)
+          this.enemies = []
+          if(val.length <= 1){
+            let id = randomInteger(500, 2000000)
+            let x = Math.floor(randomInteger(50, window.innerWidth - 50))
+            let y = Math.floor(randomInteger(50, window.innerHeight - 50))
+            window.session.request(`INSERT INTO enemies VALUES(${id}, 100, ${x}, ${y})`).then((r) => {
               this.enemies.push({
-                left: v[2],
-                top: v[3],
-                hp: v[1],
-                id: v[0]
+                left: x,
+                top: y,
+                hp: 100,
+                id
               })
-            }
-          })
-        }
+            })
+          }else{
+            val.forEach(v=>{
+              if(v){
+                this.enemies.push({
+                  left: v[2],
+                  top: v[3],
+                  hp: v[1],
+                  id: v[0]
+                })
+              }
+            })
+          }
+        } catch {}
         setTimeout(()=>this.getEnemies(), 1000)
       })
       
     },
     getPlayers: function() {
+      // console.log("syncing players")
       window.session.request(`SELECT * FROM players`).result().then((r)=>{
-        var val = r.asString().split("\n").map(i => i.split(", "))
-        val.splice(0, 1)
-        this.players = []
-        
-        val.forEach(v=>{
-          function emptyPlayer(player) {
-            return v[1] == 0 && v[2] == 0 && v[3] == 0;
-          }
-          if(v && v[0] !== this.playerId && !emptyPlayer(v)){
-            let player = {
-              left: v[1],
-              top: v[2],
-              angle: v[3]
-            };
+        try {
+          var val = r.asString().split("\n").map(i => i.split(", "))
+          val.splice(0, 1)
+          this.players = []
+          
+          val.forEach(v=>{
+            function emptyPlayer(player) {
+              return v[1] == 0 && v[2] == 0 && v[3] == 0;
+            }
+            if(v && v[0] !== this.playerId && !emptyPlayer(v)){
+              let player = {
+                left: v[1],
+                top: v[2],
+                angle: v[3]
+              };
 
-            // console.log(`player: ${v[0]} ${JSON.stringify(player)}`)
+              // console.log(`player: ${v[0]} ${JSON.stringify(player)}`)
 
-            this.players.push(player);
-          }
-        })
+              this.players.push(player);
+            }
+          })
+        } catch {}
         setTimeout(()=>this.getPlayers(), 500)
       })
     },
@@ -246,8 +252,10 @@ export default {
                 window.session.request(`UPDATE users SET cash = ${this.money} WHERE id = ${this.playerId}`)
 
                 if (this.money >= this.level * 100 + 1000) {
-                  this.level = this.level>5?5:this.level + 1
-                  console.log("Level INCREASED => " + this.level)
+                  if (this.level < 5) {
+                    this.level += 1;
+                    console.log("Level INCREASED => " + this.level)
+                  }
                 }
                 
                 // Don't always generate enemies
@@ -339,7 +347,7 @@ export default {
     this.getPlayers()
     var self = this;
 		setInterval(function(){
-      self.regenerate();
+      try { self.regenerate(); } catch {}
     }, 10);
     }, 1000)
   }
