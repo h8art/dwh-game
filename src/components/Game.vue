@@ -68,7 +68,7 @@ function getPlayerId() {
     playerId = getRandomInt(0, 9999999);
     window.localStorage.setItem("game", playerId);
   }
-  return playerId;
+  return playerId.toString();
 }
 export default {
   data(){
@@ -103,7 +103,6 @@ export default {
       window.session.request(`SELECT * FROM enemies`).result().then((r)=>{
         var val = r.asString().split("\n").map(i => i.split(", "))
         val.splice(0, 1)
-        console.log(r)
         this.enemies = []
         if(val.length <= 1){
           let id = randomInteger(500, 2000000)
@@ -135,19 +134,24 @@ export default {
     },
     getPlayers: function() {
       window.session.request(`SELECT * FROM players`).result().then((r)=>{
-        console.log(r.asString())
         var val = r.asString().split("\n").map(i => i.split(", "))
         val.splice(0, 1)
         this.players = []
-        console.log(val)
+        
         val.forEach(v=>{
-          console.log(v)
-          if(v&&v[0]!==this.playerId){
-            this.players.push({
+          function emptyPlayer(player) {
+            return v[1] == 0 && v[2] == 0 && v[3] == 0;
+          }
+          if(v && v[0] !== this.playerId && !emptyPlayer(v)){
+            let player = {
               left: v[1],
               top: v[2],
               angle: v[3]
-            })
+            };
+
+            console.log(`player: ${v[0]} ${JSON.stringify(player)}`)
+
+            this.players.push(player);
           }
         })
         setTimeout(()=>this.getPlayers(), 500)
@@ -179,6 +183,10 @@ export default {
         let money = parseInt(r.asString().split("\n")[1])
         if (!isNaN(money) && !isNullOrUndefined(money)) {
           this.money = money
+        } else {
+          console.log(`creating new player ${this.playerId}`)
+          window.session.request(`INSERT INTO users VALUES (${this.playerId}, ${this.playerId}, ${this.money})`)
+          window.session.request(`INSERT INTO players VALUES (${this.playerId}, 0, 0, 0)`)
         }
         console.log(`cash for ${this.playerId} is ${this.money}`)
       })
@@ -234,9 +242,7 @@ export default {
               if(v.hp - 10 <= 0){
                 this.enemies.splice(j, 1)
                 window.session.request(`DELETE FROM ENEMIES WHERE id = ${v.id}`)
-                console.log('killed')
                 this.money += 10
-                console.log("SETTING CASH TO " + this.money + " GAME IS " + this.playerId)
                 window.session.request(`UPDATE users SET cash = ${this.money} WHERE id = ${this.playerId}`)
                 this.level = this.level>5?5:this.level + 1
                 for(let l=0; l<this.level; l++){
@@ -253,9 +259,7 @@ export default {
                 }
               }else {
                 v.hp -= 10
-                console.log("CASH IS " + this.money + " GAME IS " + this.playerId)
                 window.session.request(`UPDATE enemies SET hp = ${v.hp - 10} WHERE id = ${v.id}`)
-                console.log('dmg')
               }
             }
           })
