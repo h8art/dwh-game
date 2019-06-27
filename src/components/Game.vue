@@ -4,13 +4,13 @@
     .treasure-btn(@click='lootModal = true')
     .treasure-modal(v-if='lootModal')
       .title LOOTBOX
-      img.loot(src='/loot.png')
+      img.loot(src='../../public/loot.png')
       .btns
         .exit(@click='lootModal = false') Cancel
         .open(@click='openLootbox') OPEN
     .treasure-weapeon(v-if='show_weapeon')
       .box
-        img.animated.tada.infinite(:src='"/weapeon_"+show_weapeon+".png"')
+        img.animated.tada.infinite(:src='"../../public/weapeon_"+show_weapeon+".png"')
   //- .items(@click='start')
   //-   .items-btn
   .market
@@ -19,29 +19,29 @@
       .bag
         .bag-list
           .bag-list-item(v-for='item, i in items', v-if='i>0&&items.length>0' @click='marketSellSelected = i' :class='{"selected" : marketSellSelected == i}')
-            img(:src='"weapeon_"+item[1]+".png"')
+            img(:src='"../../public/weapeon_"+item[1]+".png"')
         .sell
           input.price(v-model='marketSellPrice')
           .sell-btn(@click='sellItem') SELL
       .order
         .order-list
           .order-list-item(v-for='o in orders' v-if='orders')
-            img(:src='"weapeon_"+o[2]+".png"')
+            img(:src='"../../public/weapeon_"+o[2]+".png"')
             .price {{o[1]}}
             .buy(@click='buyItem(o)') BUY
         .btns
           .exit(@click='marketModal = false') Cancel
   .quick
     .quick-item
-      img(v-if='items.length>0' :src='"/weapeon_"+items[0][1]+".png"')
+      img(v-if='items.length>0' :src='"../../public/weapeon_"+items[0][1]+".png"')
     .quick-item
-      img(v-if='items&&items[1]' :src='"/weapeon_"+items[1][1]+".png"')
+      img(v-if='items&&items[1]' :src='"../../public/weapeon_"+items[1][1]+".png"')
     .quick-item
-      img(v-if='items&&items[2]' :src='"/weapeon_"+items[2][1]+".png"')
+      img(v-if='items&&items[2]' :src='"../../public/weapeon_"+items[2][1]+".png"')
     .quick-item
-      img(v-if='items&&items[3]' :src='"/weapeon_"+items[3][1]+".png"')
+      img(v-if='items&&items[3]' :src='"../../public/weapeon_"+items[3][1]+".png"')
     .quick-item
-      img(v-if='items&&items[4]' :src='"/weapeon_"+items[4][1]+".png"')
+      img(v-if='items&&items[4]' :src='"../../public/weapeon_"+items[4][1]+".png"')
   .money Cash {{money}}$
   .game(@click='shoot')
     .playerFriend(v-for='p in players' :style='{ "left": p.left + "px", "top": p.top + "px", "transform": "rotate("+p.rotate+"deg)" }')
@@ -53,10 +53,22 @@
 </template>
 <script>
 import * as fluence from "fluence";
+import { isNullOrUndefined } from 'util';
 function randomInteger(min, max) {
   var rand = min - 0.5 + Math.random() * (max - min + 1)
   rand = Math.round(rand);
   return rand;
+}
+function getRandomInt(min, max) {
+  return Math.floor(Math.random() * (max - min)) + min;
+}
+function getPlayerId() {
+  var playerId = parseInt(window.localStorage.getItem("game"));
+  if (isNullOrUndefined(playerId) || isNaN(playerId)) {
+    playerId = getRandomInt(0, 9999999);
+    window.localStorage.setItem("game", playerId);
+  }
+  return playerId.toString();
 }
 export default {
   data(){
@@ -64,6 +76,7 @@ export default {
       left: 0,
       top: 0,
       money: 1000,
+      playerId: getPlayerId(),
       enemies: [],
       lootModal: false,
       marketModal: false,
@@ -88,55 +101,65 @@ export default {
   methods: {
     getEnemies: function() {
       window.session.request(`SELECT * FROM enemies`).result().then((r)=>{
-        var val = r.asString().split("\n").map(i => i.split(", "))
-        val.splice(0, 1)
-        console.log(r)
-        this.enemies = []
-        if(val.length <= 1){
-          let id = randomInteger(500, 2000000)
-          let x = Math.floor(randomInteger(50, window.innerWidth - 50))
-          let y = Math.floor(randomInteger(50, window.innerHeight - 50))
-          window.session.request(`INSERT INTO enemies VALUES(${id}, 100, ${x}, ${y})`).result().then((r) => {
-            this.enemies.push({
-              left: x,
-              top: y,
-              hp: 100,
-              id
-            })
-          })
-        }else{
-          val.forEach(v=>{
-            if(v){
+        // console.log("syncing enemies")
+        try {
+          var val = r.asString().split("\n").map(i => i.split(", "))
+          val.splice(0, 1)
+          this.enemies = []
+          if(val.length <= 1){
+            let id = randomInteger(500, 2000000)
+            let x = Math.floor(randomInteger(50, window.innerWidth - 50))
+            let y = Math.floor(randomInteger(50, window.innerHeight - 50))
+            window.session.request(`INSERT INTO enemies VALUES(${id}, 100, ${x}, ${y})`).then((r) => {
               this.enemies.push({
-                left: v[2],
-                top: v[3],
-                hp: v[1],
-                id: v[0]
+                left: x,
+                top: y,
+                hp: 100,
+                id
               })
-            }
-          })
-        }
+            })
+          }else{
+            val.forEach(v=>{
+              if(v){
+                this.enemies.push({
+                  left: v[2],
+                  top: v[3],
+                  hp: v[1],
+                  id: v[0]
+                })
+              }
+            })
+          }
+        } catch {}
         setTimeout(()=>this.getEnemies(), 1000)
       })
       
     },
     getPlayers: function() {
+      // console.log("syncing players")
       window.session.request(`SELECT * FROM players`).result().then((r)=>{
-        console.log(r.asString())
-        var val = r.asString().split("\n").map(i => i.split(", "))
-        val.splice(0, 1)
-        this.players = []
-        console.log(val)
-        val.forEach(v=>{
-          console.log(v)
-          if(v&&v[0]!==window.localStorage.getItem("game")){
-            this.players.push({
-              left: v[1],
-              top: v[2],
-              angle: v[3]
-            })
-          }
-        })
+        try {
+          var val = r.asString().split("\n").map(i => i.split(", "))
+          val.splice(0, 1)
+          this.players = []
+          
+          val.forEach(v=>{
+            function emptyPlayer(player) {
+              return v[1] == 0 && v[2] == 0 && v[3] == 0;
+            }
+            if(v && v[0] !== this.playerId && !emptyPlayer(v)){
+              let player = {
+                left: v[1],
+                top: v[2],
+                angle: v[3]
+              };
+
+              // console.log(`player: ${v[0]} ${JSON.stringify(player)}`)
+
+              this.players.push(player);
+            }
+          })
+        } catch {}
         setTimeout(()=>this.getPlayers(), 500)
       })
     },
@@ -149,23 +172,31 @@ export default {
       })
     },
     buyItem: function(o){
-      window.session.request(`INSERT INTO weapeons VALUES(${randomInteger(500, 2000000)}, ${o[2]}, 0, ${window.localStorage.getItem("game")})`)
+      window.session.request(`INSERT INTO weapeons VALUES(${randomInteger(500, 2000000)}, ${o[2]}, 0, ${this.playerId})`)
       
       window.session.request(`SELECT * FROM users`).result().then((r) => {
         var val = r.asString().split("\n").map(i => i.split(", "))
         val.splice(0, 1)
         window.session.request(`UPDATE users SET cash = ${parseInt(val.filter(i=>parseInt(i[0])==o[3])[0][2]) + parseInt(o[1])} WHERE id = ${o[3]}`)
-        window.session.request(`UPDATE users SET cash = ${val.filter(i=>parseInt(i[0])==window.localStorage.getItem("game"))[0][2] - o[1]} WHERE id = ${window.localStorage.getItem("game")}`)
+        window.session.request(`UPDATE users SET cash = ${val.filter(i=>parseInt(i[0])==this.playerId)[0][2] - o[1]} WHERE id = ${this.playerId}`)
       })
       console.log(o[0])
       window.session.request(`DELETE FROM orders WHERE id = ${o[0]}`)
       this.money -= o[1]
     },
     getItems: function() {
-      window.session.request(`SELECT cash FROM users WHERE id = ${window.localStorage.getItem("game")}`).result().then((r) => {
-        this.money = parseInt(r.asString().split("\n")[1] )
+      window.session.request(`SELECT cash FROM users WHERE id = ${this.playerId}`).result().then((r) => {
+        let money = parseInt(r.asString().split("\n")[1])
+        if (!isNaN(money) && !isNullOrUndefined(money)) {
+          this.money = money
+        } else {
+          console.log(`creating new player ${this.playerId}`)
+          window.session.request(`INSERT INTO users VALUES (${this.playerId}, ${this.playerId}, ${this.money})`)
+          window.session.request(`INSERT INTO players VALUES (${this.playerId}, 0, 0, 0)`)
+        }
+        console.log(`cash for ${this.playerId} is ${this.money}`)
       })
-      window.session.request(`SELECT * FROM weapeons WHERE userId = ${window.localStorage.getItem("game")}`).result().then((r) => {
+      window.session.request(`SELECT * FROM weapeons WHERE userId = ${this.playerId}`).result().then((r) => {
         if(r.asString().split("\n")[1]){
           var val = r.asString().split("\n").map(i => i.split(", "))
           val.splice(0, 1)
@@ -176,7 +207,7 @@ export default {
     },
     sellItem: function() {
       let iInd = this.marketSellSelected
-      window.session.request(`INSERT INTO orders VALUES(${randomInteger(500, 2000000)}, ${this.marketSellPrice}, ${this.items[iInd][1]}, ${window.localStorage.getItem("game")})`)
+      window.session.request(`INSERT INTO orders VALUES(${randomInteger(500, 2000000)}, ${this.marketSellPrice}, ${this.items[iInd][1]}, ${this.playerId})`)
       window.session.request(`DELETE FROM weapeons WHERE id = ${this.items[iInd][0]}`)
       this.marketSellPrice = null
       this.marketSellSelected = null
@@ -188,7 +219,7 @@ export default {
         let num = randomInteger(1,4)
         this.show_weapeon = num
         setTimeout(()=>this.show_weapeon = null, 3000)
-        window.session.request(`INSERT INTO weapeons VALUES(${randomInteger(500, 2000000)}, ${num}, 0, ${window.localStorage.getItem("game")})`)
+        window.session.request(`INSERT INTO weapeons VALUES(${randomInteger(500, 2000000)}, ${num}, 0, ${this.playerId})`)
         this.items.push(num)
       }else {
         alert("Not enough cash. Need 20$")
@@ -214,32 +245,38 @@ export default {
           this.enemies.forEach((v, j)=> {
             if(Math.abs(v.left - e.left) < 30 && Math.abs(v.top - e.top) < 30){ 
               this.bullets.splice(i, 1)
-              if(v.hp - 10 < 0){
+              if(v.hp - 10 <= 0){
                 this.enemies.splice(j, 1)
-                window.session.request(`DELETE FROM ENEMIES WHERE id = ${v.id}`).result().then(r=>{
-                  console.log('killed')
-                })
+                window.session.request(`DELETE FROM ENEMIES WHERE id = ${v.id}`)
                 this.money += 10
-                window.session.request(`UPDATE users SET cash = ${this.money} WHERE id = ${window.localStorage.getItem("game")}`)
-                this.level = this.level>5?5:this.level + 1
-                for(let l=0; l<this.level; l++){
-                  let id = randomInteger(500, 2000000)
-                  let x = Math.floor(randomInteger(50, window.innerWidth - 50))
-                  let y = Math.floor(randomInteger(50, window.innerHeight - 50))
-                  window.session.request(`INSERT INTO enemies VALUES(${id}, 100, ${x}, ${y})`).result().then((r) => {
+                window.session.request(`UPDATE users SET cash = ${this.money} WHERE id = ${this.playerId}`)
+
+                if (this.money >= this.level * 100 + 1000) {
+                  if (this.level < 5) {
+                    this.level += 1;
+                    console.log("Level INCREASED => " + this.level)
+                  }
+                }
+                
+                // Don't always generate enemies
+                if (randomInteger(0, 10) % (this.level + 1) == 0) {
+                  console.log(`generating ${this.level} enemies`)
+                  for(let l=0; l<this.level; l++){
+                    let id = randomInteger(500, 2000000)
+                    let x = Math.floor(randomInteger(50, window.innerWidth - 50))
+                    let y = Math.floor(randomInteger(50, window.innerHeight - 50))
+                    window.session.request(`INSERT INTO enemies VALUES(${id}, 100, ${x}, ${y})`)
                     this.enemies.push({
                       left: x,
                       top: y,
                       hp: 100,
                       id
                     })
-                  })
+                  }
                 }
               }else {
                 v.hp -= 10
-                window.session.request(`UPDATE enemies SET hp = ${v.hp - 10} WHERE id = ${v.id}`).result().then((r) => {
-                  console.log('dmg')
-                })
+                window.session.request(`UPDATE enemies SET hp = ${v.hp - 10} WHERE id = ${v.id}`)
               }
             }
           })
@@ -261,7 +298,6 @@ export default {
         console.log("Session created");
         window.session = s;
         this.getItems()
-        window.session.request(`SELECT * FROM users`).result().then((r) => {console.log(r.asString())})
     });
     setTimeout(()=>{
      var arrow = document.getElementById("player");
@@ -278,7 +314,7 @@ export default {
       eyes.style.transform = `rotate(${rotationDegrees}deg)`
     });
     addEventListener("keydown", (e) => {
-      let pRad = Math.atan2(event.clientY - arrowY, event.clientX - arrowX)
+      let pRad = 0//Math.atan2(event.clientY - arrowY, event.clientX - arrowX) //TODO: where to get event.clientY & event.clientX?
       arrow.style.transform = "rotate(" + pRad + "rad)";
       if (e.keyCode == '87') {
         // up arrow
@@ -305,15 +341,13 @@ export default {
         }
       }
       //CREATE TABLE players(id int, posX int, posY int, angle int)
-      window.session.request(`UPDATE players SET angle = ${pRad} WHERE id = ${window.localStorage.getItem("game")}`)
-      window.session.request(`UPDATE players SET posX = ${this.left} WHERE id = ${window.localStorage.getItem("game")}`)
-      window.session.request(`UPDATE players SET posY = ${this.top} WHERE id = ${window.localStorage.getItem("game")}`)
+      window.session.request(`UPDATE players SET posX = ${this.left}, posY = ${this.top}, angle = ${pRad} WHERE id = ${this.playerId}`)
     })
     this.getEnemies()
     this.getPlayers()
     var self = this;
 		setInterval(function(){
-      self.regenerate();
+      try { self.regenerate(); } catch {}
     }, 10);
     }, 1000)
   }
@@ -422,7 +456,7 @@ export default {
       width: 90px
       height: 90px
       background-repeat: no-repeat
-      background: center center rgba(233,30,99, .4) url(/treasure.png) no-repeat
+      background: center center rgba(233,30,99, .4) url('../../public/treasure.png') no-repeat
       border-top-left-radius: 25px
       border-bottom-left-radius: 25px
       border-left: 5px solid rgb(233,30,99)
@@ -536,7 +570,7 @@ export default {
       width: 90px
       height: 90px
       background-repeat: no-repeat
-      background: center center rgba(233,30,99, .4) url(/auction.png) no-repeat
+      background: center center rgba(233,30,99, .4) url('../../public/auction.png') no-repeat
       border-top-left-radius: 25px
       border-bottom-left-radius: 25px
       border-left: 5px solid rgb(233,30,99)
@@ -554,7 +588,7 @@ export default {
       width: 90px
       height: 90px
       background-repeat: no-repeat
-      background: center center rgba(233,30,99, .4) url(/rucksack.png) no-repeat
+      background: center center rgba(233,30,99, .4) url('../../public/rucksack.png') no-repeat
       border-top-left-radius: 25px
       border-bottom-left-radius: 25px
       border-left: 5px solid rgb(233,30,99)
@@ -571,16 +605,16 @@ export default {
     right: 15px
     top: 15px
   .game
-    background: url('/stone2_b.jpg')
+    background: url('../../public/stone2_b.jpg')
     background-size: 42px 32px
     width: 100vw
     height: 100vh
-    cursor: url('/crosshair.png'), auto;
+    cursor: url('../../public/crosshair.png'), auto;
     .enemy
       width: 40px
       height: 40px
       position: absolute
-      background-image: url(/enemy.png)
+      background-image: url('../../public/enemy.png')
       background-size: 100% 100%
       .hp
         background: red
@@ -593,14 +627,14 @@ export default {
       width: 40px
       height: 40px
       position: absolute
-      background-image: url(/player.png)
+      background-image: url('../../public/player.png')
       background-size: 100% 100%
       transition: top .3s, left .3s
     .player
       width: 40px
       height: 40px
       position: absolute
-      background-image: url(/player.png)
+      background-image: url('../../public/player.png')
       background-size: 100% 100%
       transition: top .3s, left .3s
     .bullet
