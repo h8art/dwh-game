@@ -8,9 +8,9 @@
       .btns
         .exit(@click='lootModal = false') Cancel
         .open(@click='openLootbox') OPEN
-    .treasure-weapeon(v-if='show_weapeon')
+    .treasure-weapon(v-if='show_weapon')
       .box
-        img.animated.tada.infinite(:src='"../../public/weapeon_"+show_weapeon+".png"')
+        img.animated.tada.infinite(:src='"../../public/weapon_"+show_weapon+".png"')
   //- .items(@click='start')
   //-   .items-btn
   .market
@@ -19,29 +19,29 @@
       .bag
         .bag-list
           .bag-list-item(v-for='item, i in items', v-if='i>0&&items.length>0' @click='marketSellSelected = i' :class='{"selected" : marketSellSelected == i}')
-            img(:src='"../../public/weapeon_"+item[1]+".png"')
+            img(:src='"../../public/weapon_"+item.type+".png"')
         .sell
           input.price(v-model='marketSellPrice')
           .sell-btn(@click='sellItem') SELL
       .order
         .order-list
           .order-list-item(v-for='o in orders' v-if='orders')
-            img(:src='"../../public/weapeon_"+o[2]+".png"')
+            img(:src='"../../public/weapon_"+o.type+".png"')
             .price {{o[1]}}
             .buy(@click='buyItem(o)') BUY
         .btns
           .exit(@click='marketModal = false') Cancel
   .quick
     .quick-item
-      img(v-if='items.length>0' :src='"../../public/weapeon_"+items[0][1]+".png"')
+      img(v-if='items.length>0' :src='"../../public/weapon_"+items[0].type+".png"')
     .quick-item
-      img(v-if='items&&items[1]' :src='"../../public/weapeon_"+items[1][1]+".png"')
+      img(v-if='items&&items[1]' :src='"../../public/weapon_"+items[1].type+".png"')
     .quick-item
-      img(v-if='items&&items[2]' :src='"../../public/weapeon_"+items[2][1]+".png"')
+      img(v-if='items&&items[2]' :src='"../../public/weapon_"+items[2].type+".png"')
     .quick-item
-      img(v-if='items&&items[3]' :src='"../../public/weapeon_"+items[3][1]+".png"')
+      img(v-if='items&&items[3]' :src='"../../public/weapon_"+items[3].type+".png"')
     .quick-item
-      img(v-if='items&&items[4]' :src='"../../public/weapeon_"+items[4][1]+".png"')
+      img(v-if='items&&items[4]' :src='"../../public/weapon_"+items[4].type+".png"')
   .money Cash {{money}}$
   .game(@click='shoot')
     .playerFriend(v-for='p in players' :style='{ "left": p.left + "px", "top": p.top + "px", "transform": "rotate("+p.rotate+"deg)" }')
@@ -52,9 +52,10 @@
     .bullet(v-for='b in bullets', :style='{"left": b.left + "px", "top": b.top + "px"}')
 </template>
 <script>
-import * as fluence from "fluence";
-import { isNullOrUndefined } from 'util';
-function randomInteger(min, max) {
+    import * as fluence from "fluence";
+    import {isNullOrUndefined} from 'util';
+
+    function randomInteger(min, max) {
   var rand = min - 0.5 + Math.random() * (max - min + 1)
   rand = Math.round(rand);
   return rand;
@@ -80,7 +81,7 @@ export default {
       enemies: [],
       lootModal: false,
       marketModal: false,
-      show_weapeon: null,
+      show_weapon: null,
       marketSellSelected: null,
       marketSellPrice: null,
       rotate: 0,
@@ -91,26 +92,44 @@ export default {
       players: []
     }
   },
-//   >>>CREATE TABLE weapeons(id int, type int, level int, userId int)
-// table created
-
-// >>>CREATE TABLE orders(id int, price int, type int, userId int)
-// table created
-
-//CREATE TABLE enemies(id int, hp int, posX int, posY int)
   methods: {
+      genWeapon: function (arr) {
+          return {
+              id: arr[0],
+              type: arr[1],
+              level: arr[2],
+              playerId: arr[3]
+          }
+      },
+      defaultWeapon: function () {
+          return {
+              id: 0,
+              type: 0,
+              level: 0,
+              playerId: 0
+          }
+      },
+      genOrder: function (arr) {
+          return {
+              id: arr[0],
+              price: arr[1],
+              type: arr[2],
+              userId: arr[3]
+          }
+      },
     getEnemies: function() {
-      window.session.request(`SELECT * FROM enemies`).result().then((r)=>{
+        window.session.request(`SELECT * FROM enemies`).then((r) => {
         // console.log("syncing enemies")
         try {
-          var val = r.asString().split("\n").map(i => i.split(", "))
+            var val = r.asString().split("|").map(i => i.split(","))
+
           val.splice(0, 1)
           this.enemies = []
           if(val.length <= 1){
             let id = randomInteger(500, 2000000)
             let x = Math.floor(randomInteger(50, window.innerWidth - 50))
             let y = Math.floor(randomInteger(50, window.innerHeight - 50))
-            window.session.request(`INSERT INTO enemies VALUES(${id}, 100, ${x}, ${y})`).then((r) => {
+              window.session.requestAsync(`INSERT INTO enemies VALUES(${id}, 100, ${x}, ${y})`).then((r) => {
               this.enemies.push({
                 left: x,
                 top: y,
@@ -137,9 +156,9 @@ export default {
     },
     getPlayers: function() {
       // console.log("syncing players")
-      window.session.request(`SELECT * FROM players`).result().then((r)=>{
+        window.session.request(`SELECT * FROM players`).then((r) => {
         try {
-          var val = r.asString().split("\n").map(i => i.split(", "))
+            var val = r.asString().split("|").map(i => i.split(","))
           val.splice(0, 1)
           this.players = []
           
@@ -165,65 +184,114 @@ export default {
     },
     openMarket: function() {
       this.marketModal = true
-      window.session.request(`SELECT * FROM orders`).result().then((r) => {
-        var val = r.asString().split("\n").map(i => i.split(", "))
+        window.session.request(`SELECT * FROM orders`).then((r) => {
+            var val = r.asString().split("|").map(i => this.genOrder(i.split(",")))
         val.splice(0, 1)
+            console.log("orders")
+            console.log(val)
         this.orders = val
       })
     },
-    buyItem: function(o){
-      window.session.request(`INSERT INTO weapeons VALUES(${randomInteger(500, 2000000)}, ${o[2]}, 0, ${this.playerId})`)
-      
-      window.session.request(`SELECT * FROM users`).result().then((r) => {
-        var val = r.asString().split("\n").map(i => i.split(", "))
-        val.splice(0, 1)
-        window.session.request(`UPDATE users SET cash = ${parseInt(val.filter(i=>parseInt(i[0])==o[3])[0][2]) + parseInt(o[1])} WHERE id = ${o[3]}`)
-        window.session.request(`UPDATE users SET cash = ${val.filter(i=>parseInt(i[0])==this.playerId)[0][2] - o[1]} WHERE id = ${this.playerId}`)
-      })
-      console.log(o[0])
-      window.session.request(`DELETE FROM orders WHERE id = ${o[0]}`)
-      this.money -= o[1]
+      buyItem: function (order) {
+          try {
+              console.log("buy item")
+              console.log(order)
+              let weapId = randomInteger(500, 2000000)
+              window.session.requestAsync(`INSERT INTO weapons VALUES(${weapId}, ${order.type}, 0, ${this.playerId})`)
+
+              window.session.request(`SELECT * FROM users`).then((r) => {
+                  var users = r.asString().split("|").map(i => i.split(","))
+                  users.splice(0, 1)
+                  console.log("strange computations")
+                  console.log(JSON.stringify(order))
+                  console.log(r.asString())
+                  console.log(users)
+                  console.log(users.filter(i => parseInt(i[0]) == order.userId))
+                  console.log(users.filter(i => parseInt(i[0]) == this.playerId))
+                  let newTraderCash = parseInt(users.filter(i => parseInt(i[0]) == order.userId)[0][2]) + parseInt(order.price)
+                  let traderRequest = `UPDATE users SET cash = ${newTraderCash} WHERE id = ${order.userId}`
+                  console.log("traderRequest: " + traderRequest)
+                  window.session.requestAsync(traderRequest)
+                  let newCustomerCash = users.filter(i => parseInt(i[0]) == this.playerId)[0][2] - order.price
+                  let customerRequest = `UPDATE users SET cash = ${newCustomerCash} WHERE id = ${this.playerId}`
+                  console.log("customerRequest: " + customerRequest)
+                  window.session.requestAsync(customerRequest)
+              }).catch(console.log)
+              console.log(order)
+              window.session.requestAsync(`DELETE FROM orders WHERE id = ${order.id}`)
+              this.money -= order[1]
+              //["1934968", "100", "1", "588151", __ob__: Observer]
+              this.items.push({
+                  id: weapId,
+                  type: order.type,
+                  level: 0,
+                  playerId: this.playerId
+              })
+          } catch (err) {
+              console.log("error in buyItem")
+              console.log(err)
+          }
+
     },
     getItems: function() {
-      window.session.request(`SELECT cash FROM users WHERE id = ${this.playerId}`).result().then((r) => {
-        let money = parseInt(r.asString().split("\n")[1])
-        if (!isNaN(money) && !isNullOrUndefined(money)) {
-          this.money = money
-        } else {
-          console.log(`creating new player ${this.playerId}`)
-          window.session.request(`INSERT INTO users VALUES (${this.playerId}, ${this.playerId}, ${this.money})`)
-          window.session.request(`INSERT INTO players VALUES (${this.playerId}, 0, 0, 0)`)
+        try {
+            window.session.request(`SELECT cash FROM users WHERE id = ${this.playerId}`).then((r) => {
+                let money = parseInt(r.asString().split("|")[1])
+                if (!isNaN(money) && !isNullOrUndefined(money)) {
+                    this.money = money
+                } else {
+                    console.log(`creating new player ${this.playerId}`)
+                    window.session.requestAsync(`INSERT INTO users VALUES (${this.playerId}, ${this.playerId}, ${this.money})`)
+                    window.session.requestAsync(`INSERT INTO players VALUES (${this.playerId}, 0, 0, 0)`)
+                }
+                console.log(`cash for ${this.playerId} is ${this.money}`)
+            })
+            window.session.request(`SELECT * FROM weapons WHERE userId = ${this.playerId}`).then((r) => {
+
+                var val = r.asString().split("|").map(i => this.genWeapon(i.split(",")))
+                val.splice(0, 1)
+                val.unshift(this.defaultWeapon())
+                this.items = val
+
+            })
+        } catch (err) {
+            console.log("error in getItems")
+            console.log(err)
         }
-        console.log(`cash for ${this.playerId} is ${this.money}`)
-      })
-      window.session.request(`SELECT * FROM weapeons WHERE userId = ${this.playerId}`).result().then((r) => {
-        if(r.asString().split("\n")[1]){
-          var val = r.asString().split("\n").map(i => i.split(", "))
-          val.splice(0, 1)
-          val.unshift([0,0,0,0])
-          this.items = val
-        }
-      })
     },
     sellItem: function() {
-      let iInd = this.marketSellSelected
-      window.session.request(`INSERT INTO orders VALUES(${randomInteger(500, 2000000)}, ${this.marketSellPrice}, ${this.items[iInd][1]}, ${this.playerId})`)
-      window.session.request(`DELETE FROM weapeons WHERE id = ${this.items[iInd][0]}`)
-      this.marketSellPrice = null
-      this.marketSellSelected = null
-      this.items.splice(iInd, 1)
+        try {
+            let iInd = this.marketSellSelected
+            window.session.requestAsync(`INSERT INTO orders VALUES(${randomInteger(500, 2000000)}, ${this.marketSellPrice}, ${this.items[iInd].type}, ${this.playerId})`)
+            window.session.requestAsync(`DELETE FROM weapons WHERE id = ${this.items[iInd][0]}`)
+            this.marketSellPrice = null
+            this.marketSellSelected = null
+            this.items.splice(iInd, 1)
+        } catch (err) {
+            console.log("error in sellItems")
+            console.log(err)
+        }
     },
     openLootbox: function(){
-      if(this.money > 20){
-        this.money -= 20
-        let num = randomInteger(1,4)
-        this.show_weapeon = num
-        setTimeout(()=>this.show_weapeon = null, 3000)
-        window.session.request(`INSERT INTO weapeons VALUES(${randomInteger(500, 2000000)}, ${num}, 0, ${this.playerId})`)
-        this.items.push(num)
-      }else {
-        alert("Not enough cash. Need 20$")
-      }
+        try {
+            if (this.money > 20) {
+                this.money -= 20
+                let num = randomInteger(1, 4)
+
+
+                this.show_weapon = num
+                setTimeout(() => this.show_weapon = null, 3000)
+                let id = randomInteger(500, 2000000)
+                window.session.requestAsync(`INSERT INTO weapons VALUES(${id}, ${num}, 0, ${this.playerId})`)
+                this.items.push(this.genWeapon([id, num, 0, this.playerId]))
+            } else {
+                alert("Not enough cash. Need 20$")
+            }
+        } catch (err) {
+            console.log("error in openLootBox")
+            console.log(err)
+        }
+
     },
     shoot: function(e){
       this.bullets.push({
@@ -247,9 +315,9 @@ export default {
               this.bullets.splice(i, 1)
               if(v.hp - 10 <= 0){
                 this.enemies.splice(j, 1)
-                window.session.request(`DELETE FROM ENEMIES WHERE id = ${v.id}`)
+                  window.session.requestAsync(`DELETE FROM ENEMIES WHERE id = ${v.id}`)
                 this.money += 10
-                window.session.request(`UPDATE users SET cash = ${this.money} WHERE id = ${this.playerId}`)
+                  window.session.requestAsync(`UPDATE users SET cash = ${this.money} WHERE id = ${this.playerId}`)
 
                 if (this.money >= this.level * 100 + 1000) {
                   if (this.level < 5) {
@@ -265,7 +333,7 @@ export default {
                     let id = randomInteger(500, 2000000)
                     let x = Math.floor(randomInteger(50, window.innerWidth - 50))
                     let y = Math.floor(randomInteger(50, window.innerHeight - 50))
-                    window.session.request(`INSERT INTO enemies VALUES(${id}, 100, ${x}, ${y})`)
+                      window.session.requestAsync(`INSERT INTO enemies VALUES(${id}, 100, ${x}, ${y})`)
                     this.enemies.push({
                       left: x,
                       top: y,
@@ -276,7 +344,7 @@ export default {
                 }
               }else {
                 v.hp -= 10
-                window.session.request(`UPDATE enemies SET hp = ${v.hp - 10} WHERE id = ${v.id}`)
+                  window.session.requestAsync(`UPDATE enemies SET hp = ${v.hp - 10} WHERE id = ${v.id}`)
               }
             }
           })
@@ -294,11 +362,27 @@ export default {
     let appId = 267;                                                                      // Deployed database id
     let ethereumUrl = "http://geth.fluence.one:8545";                                    // Ethereum light node URL
 
-    fluence.connect(contract, appId, ethereumUrl, privateKey).then((s) => {
-        console.log("Session created");
-        window.session = s;
-        this.getItems()
-    });
+//   >>>CREATE TABLE weapons(id int, type int, level int, userId int)
+// table created
+
+// >>>CREATE TABLE orders(id int, price int, type int, userId int)
+// table created
+
+//CREATE TABLE enemies(id int, hp int, posX int, posY int)
+
+      let s = fluence.directConnect("localhost", 30000, 1);
+      window.session = s
+      s.requestAsync("CREATE TABLE weapons(id int, type int, level int, userId int)")
+      s.requestAsync("CREATE TABLE orders(id int, price int, type int, userId int)")
+      s.requestAsync("CREATE TABLE enemies(id int, hp int, posX int, posY int)")
+      s.requestAsync("CREATE TABLE players(id int, posX int, posY int, angle int)")
+      s.requestAsync("CREATE TABLE users(id int, id2 int, cash int)")
+      this.getItems()
+      /*fluence.connect(contract, appId, ethereumUrl, privateKey).then((s) => {
+          console.log("Session created");
+          window.session = s;
+          this.getItems()
+      });*/
     setTimeout(()=>{
      var arrow = document.getElementById("player");
     var arrowRects = arrow.getBoundingClientRect();
@@ -341,7 +425,7 @@ export default {
         }
       }
       //CREATE TABLE players(id int, posX int, posY int, angle int)
-      window.session.request(`UPDATE players SET posX = ${this.left}, posY = ${this.top}, angle = ${pRad} WHERE id = ${this.playerId}`)
+        window.session.requestAsync(`UPDATE players SET posX = ${this.left}, posY = ${this.top}, angle = ${pRad} WHERE id = ${this.playerId}`)
     })
     this.getEnemies()
     this.getPlayers()
@@ -386,7 +470,7 @@ export default {
       img
         max-width: 90%
   .treasure
-    &-weapeon
+    &-weapon
       position: fixed
       top: 0
       left: 0
