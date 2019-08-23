@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "core-js": "^2.6.5",
-    "fluence": "^0.3.11",
+    "fluence": "^0.3.12",
     "pug": "^2.0.4",
     "pug-plain-loader": "^1.0.0",
     "vue": "^2.6.10"
